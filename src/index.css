@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-reaprovecha-bg text-reaprovecha-brown selection:bg-reaprovecha-green-light selection:text-white;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #88c070;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4E7C27;
+}
+
+/* Touch friendly inputs */
+input, select, button {
+  touch-action: manipulation;
+}
