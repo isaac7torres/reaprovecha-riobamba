@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { PublicDashboard } from './components/PublicDashboard';
+import { InteractiveMarketMap } from './components/InteractiveMarketMap';
 import { RegisterForm } from './components/RegisterForm';
 import { AdminPanel } from './components/AdminPanel';
 import { PinModal } from './components/PinModal';
-import { Heart, Scale, Sparkles, Building2 } from 'lucide-react';
+import { Heart, Scale, Sparkles, Building2, MapPin } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -36,7 +37,8 @@ export default function App() {
     if (user.rol === 'ADMIN') {
       setActiveTab('admin');
     } else {
-      setActiveTab('register');
+      // Ir por defecto al mapa interactivo en v2.0
+      setActiveTab('mapa');
     }
   };
 
@@ -64,12 +66,17 @@ export default function App() {
           <PublicDashboard />
         )}
 
+        {activeTab === 'mapa' && (
+          <InteractiveMarketMap
+            currentUser={currentUser}
+            onRecordSaved={() => {}}
+          />
+        )}
+
         {activeTab === 'register' && (
           <RegisterForm
             currentUser={currentUser}
-            onRecordSaved={() => {
-              // Notificación opcional o actualización reactiva
-            }}
+            onRecordSaved={() => {}}
           />
         )}
 
@@ -88,15 +95,19 @@ export default function App() {
             <img src="/logo_reaprovecha.png" alt="REAPROVECHA" className="w-8 h-8 object-contain" />
             <div>
               <p className="font-bold text-reaprovecha-brown text-sm">
-                Proyecto <span className="text-reaprovecha-orange">RE</span>APROVECHA
+                Proyecto <span className="text-reaprovecha-orange">RE</span>APROVECHA (v2.0 Mapa SIG)
               </p>
               <p className="text-[11px] text-gray-400">
-                Sistema de Gestión y Recolección de Residuos Orgánicos - Mercado Mayorista de Riobamba
+                Sistema de Gestión y Recolección Georreferenciada de Residuos Orgánicos - Mercado Mayorista de Riobamba
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-6 text-[11px] font-semibold text-gray-600">
+            <span className="flex items-center space-x-1">
+              <MapPin className="w-3.5 h-3.5 text-reaprovecha-green" />
+              <span>SIG 2D Interactivo</span>
+            </span>
             <span className="flex items-center space-x-1">
               <Building2 className="w-3.5 h-3.5 text-reaprovecha-green" />
               <span>Nave Frutos Tropicales</span>
@@ -104,10 +115,6 @@ export default function App() {
             <span className="flex items-center space-x-1">
               <Scale className="w-3.5 h-3.5 text-reaprovecha-orange" />
               <span>Pesaje Digital kg</span>
-            </span>
-            <span className="flex items-center space-x-1">
-              <Sparkles className="w-3.5 h-3.5 text-reaprovecha-red" />
-              <span>Escalabilidad Hortalizas</span>
             </span>
           </div>
         </div>

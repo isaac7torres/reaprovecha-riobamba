@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   Smartphone, 
   RotateCcw,
-  Sparkles
+  Sparkles,
+  MapPin
 } from 'lucide-react';
 
 export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onRequestRoleChange }) {
@@ -24,7 +25,6 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
                 alt="Logo REAPROVECHA" 
                 className="w-full h-full object-contain"
                 onError={(e) => {
-                  // Fallback si la imagen no carga
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
@@ -38,19 +38,19 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
                 <span className="font-extrabold text-xl tracking-tight text-reaprovecha-brown">
                   <span className="text-reaprovecha-orange">RE</span>APROVECHA
                 </span>
-                <span className="bg-reaprovecha-green-soft text-reaprovecha-green text-xs px-2 py-0.5 rounded-full font-semibold border border-reaprovecha-green/30">
-                  Riobamba
+                <span className="bg-reaprovecha-green text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
+                  v2.0 Mapa SIG
                 </span>
               </div>
               <p className="text-xs text-gray-500 font-medium">Mercado Mayorista - Nave Frutos Tropicales</p>
             </div>
           </div>
 
-          {/* Navegación Principal (Tabs) */}
-          <nav className="hidden md:flex space-x-1 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200">
+          {/* Navegación Principal (Tabs Desktop) */}
+          <nav className="hidden lg:flex space-x-1 bg-gray-100/80 p-1.5 rounded-2xl border border-gray-200">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all ${
                 activeTab === 'dashboard'
                   ? 'bg-white text-reaprovecha-green shadow-sm font-semibold'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
@@ -63,19 +63,38 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
             <button
               onClick={() => {
                 if (currentRole === 'REGISTRADOR' || currentRole === 'ADMIN') {
+                  setActiveTab('mapa');
+                } else {
+                  onRequestRoleChange('REGISTRADOR');
+                }
+              }}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all ${
+                activeTab === 'mapa'
+                  ? 'bg-reaprovecha-green text-white shadow-md font-semibold'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+              }`}
+            >
+              <MapPin className="w-4 h-4 text-reaprovecha-orange-light animate-pulse" />
+              <span>Mapa Interactivo (SIG)</span>
+              {currentRole === 'LIBRE' && <Lock className="w-3.5 h-3.5 opacity-60 ml-1" />}
+            </button>
+
+            <button
+              onClick={() => {
+                if (currentRole === 'REGISTRADOR' || currentRole === 'ADMIN') {
                   setActiveTab('register');
                 } else {
                   onRequestRoleChange('REGISTRADOR');
                 }
               }}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all ${
                 activeTab === 'register'
                   ? 'bg-reaprovecha-green text-white shadow-md font-semibold'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
               }`}
             >
               <PlusCircle className="w-4 h-4 text-reaprovecha-orange-light" />
-              <span>Ingreso de Peso</span>
+              <span>Formulario</span>
               {currentRole === 'LIBRE' && <Lock className="w-3.5 h-3.5 opacity-60 ml-1" />}
             </button>
 
@@ -87,7 +106,7 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
                   onRequestRoleChange('ADMIN');
                 }
               }}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm transition-all ${
                 activeTab === 'admin'
                   ? 'bg-reaprovecha-brown text-white shadow-md font-semibold'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
@@ -147,10 +166,10 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
       </div>
 
       {/* Navegación Móvil Inferior Táctil */}
-      <div className="md:hidden border-t border-gray-200 bg-white flex justify-around p-2">
+      <div className="lg:hidden border-t border-gray-200 bg-white flex justify-around p-2">
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center py-1 px-3 rounded-lg text-xs font-medium ${
+          className={`flex flex-col items-center py-1 px-3 rounded-lg text-[11px] font-medium ${
             activeTab === 'dashboard' ? 'text-reaprovecha-green font-bold' : 'text-gray-500'
           }`}
         >
@@ -161,17 +180,33 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
         <button
           onClick={() => {
             if (currentRole === 'REGISTRADOR' || currentRole === 'ADMIN') {
+              setActiveTab('mapa');
+            } else {
+              onRequestRoleChange('REGISTRADOR');
+            }
+          }}
+          className={`flex flex-col items-center py-1 px-3 rounded-lg text-[11px] font-medium ${
+            activeTab === 'mapa' ? 'text-reaprovecha-green font-bold' : 'text-gray-500'
+          }`}
+        >
+          <MapPin className="w-5 h-5 mb-0.5" />
+          <span>Mapa SIG</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (currentRole === 'REGISTRADOR' || currentRole === 'ADMIN') {
               setActiveTab('register');
             } else {
               onRequestRoleChange('REGISTRADOR');
             }
           }}
-          className={`flex flex-col items-center py-1 px-3 rounded-lg text-xs font-medium ${
+          className={`flex flex-col items-center py-1 px-3 rounded-lg text-[11px] font-medium ${
             activeTab === 'register' ? 'text-reaprovecha-green font-bold' : 'text-gray-500'
           }`}
         >
           <PlusCircle className="w-5 h-5 mb-0.5" />
-          <span>Pesaje</span>
+          <span>Formulario</span>
         </button>
 
         <button
@@ -182,7 +217,7 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
               onRequestRoleChange('ADMIN');
             }
           }}
-          className={`flex flex-col items-center py-1 px-3 rounded-lg text-xs font-medium ${
+          className={`flex flex-col items-center py-1 px-3 rounded-lg text-[11px] font-medium ${
             activeTab === 'admin' ? 'text-reaprovecha-brown font-bold' : 'text-gray-500'
           }`}
         >
