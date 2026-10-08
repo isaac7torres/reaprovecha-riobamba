@@ -16,7 +16,6 @@ const STORAGE_KEYS = {
   USERS: 'reaprovecha_users_v1',
 };
 
-// Determinar el servidor backend de red local
 const getApiBaseUrl = () => {
   const host = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : 'localhost';
   return `http://${host}:3001/api`;
@@ -79,7 +78,7 @@ const initStorage = () => {
 
 initStorage();
 
-// Sincronización Nube Supabase (Con preservación inteligente de registros)
+// Sincronización Nube Supabase (Carga y Polling)
 if (supabase) {
   const fetchCloudRecords = async () => {
     try {
@@ -92,40 +91,35 @@ if (supabase) {
         const localRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.REGISTROS) || '[]');
         
         if (data.length > 0) {
-          // Preservar registros locales que aún no hayan sido sincronizados a la nube
           const cloudIds = new Set(data.map(d => d.id));
           const unsyncedLocal = localRecords.filter(r => !cloudIds.has(r.id));
-          
           const merged = [...data, ...unsyncedLocal].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
           localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(merged));
         } else if (localRecords.length > 0) {
-          // Si Supabase devuelve 0 filas pero tenemos registros locales, intentar subir los locales a Supabase
           try {
             await supabase.from('registros_desperdicios').insert(localRecords.slice(0, 20));
           } catch (e) {}
         }
         notifyListeners();
-      } else if (error) {
-        console.warn('⚠️ Supabase error de lectura (Verificar RLS o tabla):', error.message || error);
       }
-    } catch (err) {
-      console.warn('Error fetching Supabase records:', err);
-    }
+    } catch (err) {}
+  };
+
+  const fetchCloudUsers = async () => {
+    try {
+      const { data, error } = await supabase.from('users').select('*');
+      if (!error && data && data.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data));
+        notifyListeners();
+      }
+    } catch (e) {}
   };
 
   fetchCloudRecords();
+  fetchCloudUsers();
 
-  // Polling automático cada 3 segundos
   setInterval(fetchCloudRecords, 3000);
-
-  try {
-    supabase
-      .channel('realtime_registros')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, () => {
-        fetchCloudRecords();
-      })
-      .subscribe();
-  } catch (err) {}
+  setInterval(fetchCloudUsers, 5000);
 }
 
 // Escuchar eventos en Tiempo Real desde Servidor Local (SSE fallback para desarrollo local)
@@ -182,7 +176,12 @@ export const DB = {
   getProductos: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTOS) || '[]'),
 
   saveProducto: async (prod) => {
-    if (!supabase) {
+    const prodObj = { ...prod, id: `prod-${Date.now()}` };
+    if (supabase) {
+      try {
+        await supabase.from('productos').insert([prodObj]);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/productos`, {
           method: 'POST',
@@ -193,13 +192,17 @@ export const DB = {
     }
 
     const list = DB.getProductos();
-    list.push({ ...prod, id: `prod-${Date.now()}` });
+    list.push(prodObj);
     localStorage.setItem(STORAGE_KEYS.PRODUCTOS, JSON.stringify(list));
     notifyListeners();
   },
 
   deleteProducto: async (id) => {
-    if (!supabase) {
+    if (supabase) {
+      try {
+        await supabase.from('productos').delete().eq('id', id);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/productos/${id}`, { method: 'DELETE' });
       } catch (err) {}
@@ -213,7 +216,12 @@ export const DB = {
   getPuestos: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.PUESTOS) || '[]'),
 
   savePuesto: async (puesto) => {
-    if (!supabase) {
+    const puestoObj = { ...puesto, id: `puesto-${Date.now()}` };
+    if (supabase) {
+      try {
+        await supabase.from('puestos').insert([puestoObj]);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/puestos`, {
           method: 'POST',
@@ -224,13 +232,17 @@ export const DB = {
     }
 
     const list = DB.getPuestos();
-    list.push({ ...puesto, id: `puesto-${Date.now()}` });
+    list.push(puestoObj);
     localStorage.setItem(STORAGE_KEYS.PUESTOS, JSON.stringify(list));
     notifyListeners();
   },
 
   deletePuesto: async (id) => {
-    if (!supabase) {
+    if (supabase) {
+      try {
+        await supabase.from('puestos').delete().eq('id', id);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/puestos/${id}`, { method: 'DELETE' });
       } catch (err) {}
@@ -305,29 +317,38 @@ export const DB = {
   getUsers: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]'),
 
   saveUser: async (user) => {
-    if (!supabase) {
+    const userObj = { ...user, id: user.id || `usr-${Date.now()}` };
+    if (supabase) {
+      try {
+        await supabase.from('users').upsert([userObj]);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(user)
+          body: JSON.stringify(userObj)
         });
       } catch (err) {}
     }
 
     const list = DB.getUsers();
-    const idx = list.findIndex(u => u.id === user.id);
+    const idx = list.findIndex(u => u.id === userObj.id);
     if (idx >= 0) {
-      list[idx] = user;
+      list[idx] = userObj;
     } else {
-      list.push({ ...user, id: `usr-${Date.now()}` });
+      list.push(userObj);
     }
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
     notifyListeners();
   },
 
   deleteUser: async (id) => {
-    if (!supabase) {
+    if (supabase) {
+      try {
+        await supabase.from('users').delete().eq('id', id);
+      } catch (e) {}
+    } else {
       try {
         await fetch(`${getApiBaseUrl()}/users/${id}`, { method: 'DELETE' });
       } catch (err) {}
