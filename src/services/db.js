@@ -79,7 +79,7 @@ const initStorage = () => {
 
 initStorage();
 
-// Sincronización Nube Supabase (WebSockets + Polling cada 3 segundos como garantía total)
+// Sincronización Nube Supabase (Con preservación inteligente de registros)
 if (supabase) {
   const fetchCloudRecords = async () => {
     try {
@@ -88,9 +88,25 @@ if (supabase) {
         .select('*')
         .order('fecha', { ascending: false });
 
-      if (!error && data) {
-        localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(data));
+      if (!error && Array.isArray(data)) {
+        const localRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.REGISTROS) || '[]');
+        
+        if (data.length > 0) {
+          // Preservar registros locales que aún no hayan sido sincronizados a la nube
+          const cloudIds = new Set(data.map(d => d.id));
+          const unsyncedLocal = localRecords.filter(r => !cloudIds.has(r.id));
+          
+          const merged = [...data, ...unsyncedLocal].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+          localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(merged));
+        } else if (localRecords.length > 0) {
+          // Si Supabase devuelve 0 filas pero tenemos registros locales, intentar subir los locales a Supabase
+          try {
+            await supabase.from('registros_desperdicios').insert(localRecords.slice(0, 20));
+          } catch (e) {}
+        }
         notifyListeners();
+      } else if (error) {
+        console.warn('⚠️ Supabase error de lectura (Verificar RLS o tabla):', error.message || error);
       }
     } catch (err) {
       console.warn('Error fetching Supabase records:', err);
@@ -99,8 +115,8 @@ if (supabase) {
 
   fetchCloudRecords();
 
-  // Polling automático cada 3.5 segundos para garantizar actualización en todos los celulares
-  setInterval(fetchCloudRecords, 3500);
+  // Polling automático cada 3 segundos
+  setInterval(fetchCloudRecords, 3000);
 
   try {
     supabase
@@ -237,8 +253,13 @@ export const DB = {
       ...newRecord
     };
 
-    let savedRecord = null;
+    // 1. Guardar de inmediato en la memoria local para respuesta UI instantánea
+    const currentList = DB.getRegistros();
+    const updatedList = [recordPayload, ...currentList.filter(r => r.id !== recordPayload.id)];
+    localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(updatedList));
+    notifyListeners();
 
+    // 2. Si Supabase está activo, guardar en la Nube
     if (supabase) {
       try {
         const { data, error } = await supabase
@@ -246,38 +267,23 @@ export const DB = {
           .insert([recordPayload])
           .select();
 
-        if (!error && data && data.length > 0) {
-          savedRecord = data[0];
-        } else if (error) {
-          console.warn('⚠️ Supabase error insert:', error.message || error);
+        if (error) {
+          console.warn('⚠️ Supabase insert error:', error.message || error);
         }
       } catch (err) {
         console.warn('⚠️ Supabase exception:', err);
       }
     } else {
       try {
-        const res = await fetch(`${getApiBaseUrl()}/registros`, {
+        await fetch(`${getApiBaseUrl()}/registros`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newRecord)
         });
-        const resData = await res.json();
-        if (resData.success) {
-          savedRecord = resData.record;
-        }
       } catch (err) {}
     }
 
-    if (!savedRecord) {
-      savedRecord = recordPayload;
-    }
-
-    const list = DB.getRegistros();
-    list.unshift(savedRecord);
-    localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(list));
-
-    notifyListeners();
-    return savedRecord;
+    return recordPayload;
   },
 
   deleteRegistro: async (id) => {
