@@ -15,9 +15,9 @@ import {
   FileSpreadsheet,
   Layers,
   Sparkles,
-  UserCheck
+  RefreshCw
 } from 'lucide-react';
-import { DB, subscribeToDataChanges } from '../services/db';
+import { DB, subscribeToDataChanges, fetchCloudRecords } from '../services/db';
 
 export function PublicDashboard() {
   const [registros, setRegistros] = useState([]);
@@ -25,6 +25,7 @@ export function PublicDashboard() {
   const [productos, setProductos] = useState([]);
   const [puestos, setPuestos] = useState([]);
   const [users, setUsers] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filtros state
   const [filterRango, setFilterRango] = useState('7dias');
@@ -45,6 +46,13 @@ export function PublicDashboard() {
     setProductos(DB.getProductos());
     setPuestos(DB.getPuestos());
     setUsers(DB.getUsers());
+  };
+
+  const handleManualSync = async () => {
+    setIsRefreshing(true);
+    await fetchCloudRecords();
+    loadAllData();
+    setTimeout(() => setIsRefreshing(false), 800);
   };
 
   // Listado de nombres únicos de registradores que han ingresado pesajes
@@ -214,13 +222,24 @@ export function PublicDashboard() {
           </p>
         </div>
 
-        <button
-          onClick={() => DB.exportToExcel(filteredRecords)}
-          className="inline-flex items-center space-x-2 bg-reaprovecha-green-soft text-reaprovecha-green hover:bg-reaprovecha-green hover:text-white px-4 py-2.5 rounded-2xl font-bold text-xs transition-all border border-reaprovecha-green/30"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Exportar Datos (Excel/CSV)</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleManualSync}
+            disabled={isRefreshing}
+            className="inline-flex items-center space-x-2 bg-reaprovecha-orange-soft text-reaprovecha-orange hover:bg-reaprovecha-orange hover:text-white px-4 py-2.5 rounded-2xl font-bold text-xs transition-all border border-reaprovecha-orange/30 cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Sincronizando...' : 'Sincronizar Nube'}</span>
+          </button>
+
+          <button
+            onClick={() => DB.exportToExcel(filteredRecords)}
+            className="inline-flex items-center space-x-2 bg-reaprovecha-green-soft text-reaprovecha-green hover:bg-reaprovecha-green hover:text-white px-4 py-2.5 rounded-2xl font-bold text-xs transition-all border border-reaprovecha-green/30 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Exportar Excel (CSV)</span>
+          </button>
+        </div>
       </div>
 
       {/* Barra de Filtros */}

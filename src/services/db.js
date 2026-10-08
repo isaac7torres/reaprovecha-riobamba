@@ -78,48 +78,59 @@ const initStorage = () => {
 
 initStorage();
 
-// Sincronización Nube Supabase (Carga y Polling)
+// Cargar y Sincronizar Nube Supabase
+export const fetchCloudRecords = async () => {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase
+      .from('registros_desperdicios')
+      .select('*')
+      .order('fecha', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      if (data.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(data));
+      }
+      notifyListeners();
+    }
+  } catch (err) {}
+};
+
+export const fetchCloudUsers = async () => {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from('users').select('*');
+    if (!error && data && data.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data));
+      notifyListeners();
+    }
+  } catch (e) {}
+};
+
 if (supabase) {
-  const fetchCloudRecords = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('registros_desperdicios')
-        .select('*')
-        .order('fecha', { ascending: false });
-
-      if (!error && Array.isArray(data)) {
-        const localRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.REGISTROS) || '[]');
-        
-        if (data.length > 0) {
-          const cloudIds = new Set(data.map(d => d.id));
-          const unsyncedLocal = localRecords.filter(r => !cloudIds.has(r.id));
-          const merged = [...data, ...unsyncedLocal].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-          localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(merged));
-        } else if (localRecords.length > 0) {
-          try {
-            await supabase.from('registros_desperdicios').insert(localRecords.slice(0, 20));
-          } catch (e) {}
-        }
-        notifyListeners();
-      }
-    } catch (err) {}
-  };
-
-  const fetchCloudUsers = async () => {
-    try {
-      const { data, error } = await supabase.from('users').select('*');
-      if (!error && data && data.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data));
-        notifyListeners();
-      }
-    } catch (e) {}
-  };
-
   fetchCloudRecords();
   fetchCloudUsers();
 
-  setInterval(fetchCloudRecords, 3000);
-  setInterval(fetchCloudUsers, 5000);
+  // Polling automático cada 2.5 segundos
+  setInterval(fetchCloudRecords, 2500);
+  setInterval(fetchCloudUsers, 4000);
+
+  // Escuchar cuando el usuario vuelve a la pestaña
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', fetchCloudRecords);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') fetchCloudRecords();
+    });
+  }
+
+  try {
+    supabase
+      .channel('realtime_registros')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, () => {
+        fetchCloudRecords();
+      })
+      .subscribe();
+  } catch (err) {}
 }
 
 // Escuchar eventos en Tiempo Real desde Servidor Local (SSE fallback para desarrollo local)
@@ -279,7 +290,9 @@ export const DB = {
           .insert([recordPayload])
           .select();
 
-        if (error) {
+        if (!error && data && data.length > 0) {
+          fetchCloudRecords();
+        } else if (error) {
           console.warn('⚠️ Supabase insert error:', error.message || error);
         }
       } catch (err) {
@@ -302,6 +315,7 @@ export const DB = {
     if (supabase) {
       try {
         await supabase.from('registros_desperdicios').delete().eq('id', id);
+        fetchCloudRecords();
       } catch (err) {}
     } else {
       try {
@@ -321,6 +335,7 @@ export const DB = {
     if (supabase) {
       try {
         await supabase.from('users').upsert([userObj]);
+        fetchCloudUsers();
       } catch (e) {}
     } else {
       try {
@@ -347,6 +362,7 @@ export const DB = {
     if (supabase) {
       try {
         await supabase.from('users').delete().eq('id', id);
+        fetchCloudUsers();
       } catch (e) {}
     } else {
       try {
