@@ -58,7 +58,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
     if (prods.length > 0 && !selectedProducto) setSelectedProducto(prods[0].id);
   };
 
-  // Validar entrada estricta de números positivos y reemplazar coma por punto para teclados móviles en español (ej. 15,5 -> 15.5)
+  // Validar entrada estricta de números positivos y reemplazar comas por puntos para móviles
   const handlePesoChange = (e) => {
     let val = e.target.value.replace(',', '.');
     if (val === '' || /^\d*\.?\d*$/.test(val)) {
@@ -69,7 +69,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
   // 1. Abrir Modal de Confirmación antes de enviar
   const handleOpenConfirm = (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -145,7 +145,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
       const msg = `✅ ¡Registro de ${pendingRecord.pesoKg} kg de ${pendingRecord.productoNombre} guardado correctamente!`;
       setSuccessMsg(msg);
       
-      // Limpiar solo el peso y la observación para facilitar el pesaje del siguiente lote
+      // Limpiar peso y observación
       setPesoKg('');
       setObservacion('');
       setPendingRecord(null);
@@ -213,8 +213,8 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
         </div>
       )}
 
-      {/* Formulario Principal */}
-      <form onSubmit={handleOpenConfirm} className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 sm:p-8 space-y-6">
+      {/* Formulario Principal (Sin etiquetas HTML form nativas para evitar bloqueos móviles) */}
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 sm:p-8 space-y-6">
         
         {/* 1. Selección de Nave */}
         <div>
@@ -295,7 +295,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
           </div>
         </div>
 
-        {/* 4. Campo de Peso de la Balanza (Validación Estricta Numérica Positiva) */}
+        {/* 4. Campo de Peso de la Balanza (Teclado Decimal Móvil sin validación HTML5 bloqueante) */}
         <div className="bg-reaprovecha-green-soft/40 p-5 rounded-3xl border border-reaprovecha-green/20">
           <label className="block text-xs font-bold uppercase tracking-wider text-reaprovecha-green mb-2 flex items-center space-x-1">
             <Scale className="w-5 h-5 text-reaprovecha-green" />
@@ -306,7 +306,6 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
             <input
               type="text"
               inputMode="decimal"
-              pattern="[0-9]*[.]?[0-9]*"
               value={pesoKg}
               onChange={handlePesoChange}
               placeholder="Ejemplo: 15.50"
@@ -361,13 +360,14 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
         {/* Botón Principal (Abre Modal de Confirmación) */}
         <button
-          type="submit"
+          type="button"
+          onClick={handleOpenConfirm}
           className="w-full py-4 bg-reaprovecha-green hover:bg-reaprovecha-green-dark text-white font-extrabold text-base rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-98 flex items-center justify-center space-x-2 cursor-pointer"
         >
           <Send className="w-5 h-5 text-reaprovecha-orange-light" />
           <span>Guardar Pesaje en Base de Datos</span>
         </button>
-      </form>
+      </div>
 
       {/* MODAL DE CONFIRMACIÓN DE DATOS ANTES DE ENVIAR */}
       {confirmModalOpen && pendingRecord && (
