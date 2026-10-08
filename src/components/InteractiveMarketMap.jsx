@@ -60,25 +60,21 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
     return map;
   }, [puestos, registros, todayStr]);
 
-  // Agrupar puestos por Pasillos / Sectores del Plano de la Nave
-  const pasillosMap = useMemo(() => {
-    const groups = {
-      'Pasillo 1 - Frutas de Gran Volumen (Naranja, Banano, Mandarina)': [],
-      'Pasillo 2 - Frutas Tropicales (Piña, Maracuyá, Papaya, Mango)': [],
-      'Pasillo 3 - Cítricos y Melones (Sandía, Granadilla, Limón)': []
-    };
+  // Agrupar puestos por Lado A (Izquierdo / Puestos 1-10) y Lado B (Derecho / Puestos 11-20)
+  const { puestosLadoA, puestosLadoB } = useMemo(() => {
+    const ladoA = [];
+    const ladoB = [];
 
     puestos.forEach((p, idx) => {
-      if (idx < 5) {
-        groups['Pasillo 1 - Frutas de Gran Volumen (Naranja, Banano, Mandarina)'].push(p);
-      } else if (idx < 10) {
-        groups['Pasillo 2 - Frutas Tropicales (Piña, Maracuyá, Papaya, Mango)'].push(p);
+      // Si el número del puesto o su índice está en la primera mitad (1-10)
+      if (idx < 10) {
+        ladoA.push(p);
       } else {
-        groups['Pasillo 3 - Cítricos y Melones (Sandía, Granadilla, Limón)'].push(p);
+        ladoB.push(p);
       }
     });
 
-    return groups;
+    return { puestosLadoA: ladoA, puestosLadoB: ladoB };
   }, [puestos]);
 
   const handleOpenPuestoForm = (puesto) => {
@@ -111,6 +107,82 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
   const puestosPesadosHoyCount = Object.values(puestosStatsMap).filter(s => s.countHoy > 0).length;
   const puestosPendientesCount = totalPuestos - puestosPesadosHoyCount;
 
+  const renderMapPin = (puesto) => {
+    const stat = puestosStatsMap[puesto.id] || { countHoy: 0, totalKgHoy: 0, ultimosProductos: [] };
+    const isPesado = stat.countHoy > 0;
+    const puestoNumOnly = puesto.numero.replace(/\D/g, '') || puesto.numero;
+
+    return (
+      <div key={puesto.id} className="relative group flex flex-col items-center">
+        {/* Tooltip Emergente al pasar el cursor o presionar */}
+        <div className="absolute bottom-full mb-3 hidden group-hover:flex flex-col items-center z-40 w-48 pointer-events-none animate-fadeIn">
+          <div className="bg-slate-900 text-white text-xs p-3 rounded-2xl shadow-2xl border border-slate-700 space-y-1 text-center w-full">
+            <div className="flex items-center justify-center space-x-1 font-black text-amber-400">
+              <Store className="w-3.5 h-3.5" />
+              <span>{puesto.numero}</span>
+            </div>
+            <p className="text-[11px] text-slate-300 font-medium truncate">{puesto.comerciante}</p>
+            {isPesado ? (
+              <div className="bg-emerald-950/80 text-emerald-300 px-2 py-1 rounded-xl text-[10px] font-extrabold flex items-center justify-center space-x-1 border border-emerald-500/30">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span>Hoy: {stat.totalKgHoy.toFixed(1)} kg</span>
+              </div>
+            ) : (
+              <div className="bg-amber-950/80 text-amber-300 px-2 py-1 rounded-xl text-[10px] font-extrabold flex items-center justify-center space-x-1 border border-amber-500/30">
+                <Clock className="w-3 h-3 text-amber-400" />
+                <span>Pendiente de Pesar</span>
+              </div>
+            )}
+            <p className="text-[9px] text-emerald-400 font-bold tracking-wider pt-0.5 uppercase">Tocar para registrar peso</p>
+          </div>
+          {/* Flecha del Tooltip */}
+          <div className="w-2.5 h-2.5 bg-slate-900 transform rotate-45 -mt-1.5 border-r border-b border-slate-700" />
+        </div>
+
+        {/* Pin de Ubicación 3D Interactivo */}
+        <button
+          onClick={() => handleOpenPuestoForm(puesto)}
+          className="relative group cursor-pointer focus:outline-none flex flex-col items-center transform transition-all duration-300 hover:scale-125 hover:-translate-y-2 z-20"
+        >
+          {/* Sombra proyectada 3D en el piso */}
+          <div className="w-6 h-2 bg-slate-900/30 rounded-full filter blur-[1.5px] transition-all group-hover:w-8 group-hover:bg-slate-900/40 translate-y-11" />
+
+          {/* Cuerpo del Pin (Forma de gota de mapa 3D) */}
+          <div className={`w-11 h-11 rounded-t-full rounded-br-full transform -rotate-45 shadow-xl border-2 transition-all flex items-center justify-center relative ${
+            isPesado
+              ? 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-emerald-400 text-white border-white ring-4 ring-emerald-400/40 hover:ring-emerald-400/80'
+              : 'bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 border-white ring-4 ring-amber-300/50 hover:ring-amber-400/90 animate-pulse'
+          }`}>
+            
+            {/* Contenido interior (rotado 45° para quedar derecho) */}
+            <div className="transform rotate-45 flex flex-col items-center justify-center">
+              <span className="text-[11px] font-black leading-none tracking-tighter">
+                {puestoNumOnly}
+              </span>
+              <span className="text-[9px]">
+                {isPesado ? '✓' : '•'}
+              </span>
+            </div>
+
+            {/* Badge de pulso animado para puestos pesados hoy */}
+            {isPesado && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-300 ring-2 ring-white animate-ping" />
+            )}
+          </div>
+
+          {/* Etiqueta flotante inferior con el número de puesto */}
+          <span className={`mt-2 px-2 py-0.5 rounded-md text-[10px] font-black shadow-md border uppercase tracking-wider ${
+            isPesado 
+              ? 'bg-emerald-900 text-emerald-100 border-emerald-600' 
+              : 'bg-slate-900 text-amber-300 border-slate-700'
+          }`}>
+            P-{puestoNumOnly}
+          </span>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-fadeIn pb-24">
       
@@ -126,7 +198,7 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
                 Mapa Georreferenciado de Puestos (SIG 2D)
               </h1>
               <p className="text-xs text-gray-500">
-                Nave de Frutos Tropicales - Toca cualquier puesto en el mapa para ingresar su peso.
+                Nave de Frutos Tropicales - Pasillo Único (10 Puestos a cada lado). Toca cualquier puesto para pesar.
               </p>
             </div>
           </div>
@@ -196,94 +268,69 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
         </div>
       </div>
 
-      {/* PLANO ARQUITECTÓNICO INTERACTIVO 2D DE LA NAVE DE FRUTOS TROPICALES */}
-      <div className="bg-emerald-950/5 p-6 rounded-3xl border-2 border-emerald-800/20 shadow-inner space-y-8 relative overflow-hidden">
+      {/* LIENZO VECTORIAL DEL MAPA INTERACTIVO SIG (ESTILO GIS CON PINES 3D) */}
+      <div className="bg-slate-200/80 p-4 sm:p-8 rounded-3xl border-4 border-slate-300 shadow-2xl space-y-8 relative overflow-hidden select-none">
         
-        {/* Marca de Agua de la Nave */}
-        <div className="absolute top-4 right-6 text-emerald-900/10 font-black text-4xl pointer-events-none select-none uppercase tracking-widest">
-          PLANO NAVE TROPICAL
+        {/* Marca de Agua de Fondo del Mapa SIG */}
+        <div className="absolute top-4 right-6 text-slate-400/30 font-black text-2xl sm:text-4xl pointer-events-none uppercase tracking-widest flex items-center space-x-2">
+          <MapPin className="w-8 h-8 text-slate-400/40" />
+          <span>MAPA SIG NAVE FRUTOS TROPICALES</span>
         </div>
 
-        {Object.entries(pasillosMap).map(([pasilloNombre, puestosPasillo]) => (
-          <div key={pasilloNombre} className="space-y-3">
-            <div className="flex items-center space-x-2 text-xs font-extrabold text-emerald-900 uppercase tracking-wider bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl border border-emerald-900/10 w-fit">
-              <Building2 className="w-4 h-4 text-reaprovecha-green" />
-              <span>{pasilloNombre}</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {puestosPasillo.filter(isPuestoVisible).map(puesto => {
-                const stat = puestosStatsMap[puesto.id] || { countHoy: 0, totalKgHoy: 0, ultimosProductos: [] };
-                const isPesado = stat.countHoy > 0;
-
-                return (
-                  <button
-                    key={puesto.id}
-                    onClick={() => handleOpenPuestoForm(puesto)}
-                    className={`p-4 rounded-3xl border-2 text-left transition-all relative overflow-hidden group cursor-pointer transform hover:-translate-y-1 shadow-md ${
-                      isPesado
-                        ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/80 border-emerald-500/80 ring-2 ring-emerald-500/20 hover:border-emerald-600'
-                        : 'bg-white border-amber-300/80 hover:border-amber-500 hover:shadow-lg'
-                    }`}
-                  >
-                    {/* Badge de Estado en la Esquina Superior */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${
-                        isPesado 
-                          ? 'bg-emerald-600 text-white shadow-sm' 
-                          : 'bg-amber-100 text-amber-900 border border-amber-300'
-                      }`}>
-                        {isPesado ? (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>PESADO</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="w-3.5 h-3.5 text-amber-600" />
-                            <span>PENDIENTE</span>
-                          </>
-                        )}
-                      </span>
-
-                      <span className="text-xl">
-                        {stat.ultimosProductos.length > 0 ? stat.ultimosProductos.join('') : '🍍'}
-                      </span>
-                    </div>
-
-                    {/* Número de Puesto y Comerciante */}
-                    <h4 className="text-lg font-black text-reaprovecha-brown group-hover:text-reaprovecha-green transition-colors">
-                      {puesto.numero}
-                    </h4>
-                    <p className="text-xs text-gray-500 font-medium line-clamp-1">
-                      {puesto.comerciante}
-                    </p>
-
-                    {/* Peso Acumulado Hoy si ya fue registrado */}
-                    {isPesado ? (
-                      <div className="mt-3 pt-2 border-t border-emerald-200 flex items-center justify-between">
-                        <span className="text-[10px] text-emerald-800 font-bold uppercase">Acumulado Hoy:</span>
-                        <span className="text-base font-black text-emerald-700">
-                          {stat.totalKgHoy.toFixed(1)} kg
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-reaprovecha-orange font-bold text-xs">
-                        <span>Tocar para pesar</span>
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    )}
-
-                    {/* Efecto decorativo de pulso para pesados */}
-                    {isPesado && (
-                      <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        {/* ÁREA SUPERIOR: LADO A (Puestos 01 al 10 - Pines de Ubicación) */}
+        <div className="space-y-3 relative z-10">
+          <div className="flex items-center space-x-2 text-xs font-black text-emerald-950 uppercase tracking-wider bg-emerald-100/90 backdrop-blur-md px-4 py-2 rounded-xl border border-emerald-300 w-fit shadow-sm">
+            <Building2 className="w-4 h-4 text-emerald-700" />
+            <span>LADO A - PUESTOS 01 AL 10 (SECTOR IZQUIERDO)</span>
           </div>
-        ))}
+
+          {/* Cuadrícula Georreferenciada de Pines de Lado A */}
+          <div className="bg-slate-100/90 p-4 sm:p-6 rounded-3xl border border-slate-300 shadow-inner grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3 sm:gap-4 items-center justify-items-center">
+            {puestosLadoA.filter(isPuestoVisible).map(renderMapPin)}
+          </div>
+        </div>
+
+        {/* CALLE / CORREDOR DEL PASILLO CENTRAL (ESTILO VÍA PRINCIPAL GIS DE LA IMAGEN) */}
+        <div className="my-4 py-6 px-6 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-3xl border-4 border-amber-600/80 text-amber-950 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl relative overflow-hidden">
+          
+          {/* Marcación de carril discontinuo central */}
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-amber-700/40 pointer-events-none" />
+
+          {/* Señalización de Entrada */}
+          <div className="flex items-center space-x-2 text-xs font-black tracking-widest uppercase relative z-10">
+            <span className="bg-amber-950 text-amber-300 px-3 py-1.5 rounded-xl shadow-md border border-amber-700 flex items-center space-x-1">
+              <span>⬅️ ENTRADA PRINCIPAL</span>
+            </span>
+            <span className="hidden lg:inline text-amber-900 font-extrabold">| PASILLO CENTRAL DE NAVE</span>
+          </div>
+
+          {/* Banner identificador del croquis */}
+          <div className="bg-white/90 backdrop-blur-md px-5 py-2 rounded-2xl shadow-md border border-amber-600/50 text-amber-950 font-black text-xs uppercase tracking-wider flex items-center space-x-2 relative z-10">
+            <Sparkles className="w-4 h-4 text-amber-600 animate-spin" />
+            <span>VÍA DE CIRCULACIÓN PEATONAL Y MONTACARGAS</span>
+          </div>
+
+          {/* Señalización de Salida */}
+          <div className="flex items-center space-x-2 text-xs font-black tracking-widest uppercase relative z-10">
+            <span className="hidden lg:inline text-amber-900 font-extrabold">ZONA DE CARGA |</span>
+            <span className="bg-amber-950 text-amber-300 px-3 py-1.5 rounded-xl shadow-md border border-amber-700 flex items-center space-x-1">
+              <span>SALIDA Y CISTERNA ➡️</span>
+            </span>
+          </div>
+        </div>
+
+        {/* ÁREA INFERIOR: LADO B (Puestos 11 al 20 - Pines de Ubicación) */}
+        <div className="space-y-3 relative z-10">
+          <div className="flex items-center space-x-2 text-xs font-black text-amber-950 uppercase tracking-wider bg-amber-100/90 backdrop-blur-md px-4 py-2 rounded-xl border border-amber-300 w-fit shadow-sm">
+            <Building2 className="w-4 h-4 text-amber-700" />
+            <span>LADO B - PUESTOS 11 AL 20 (SECTOR DERECHO)</span>
+          </div>
+
+          {/* Cuadrícula Georreferenciada de Pines de Lado B */}
+          <div className="bg-slate-100/90 p-4 sm:p-6 rounded-3xl border border-slate-300 shadow-inner grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3 sm:gap-4 items-center justify-items-center">
+            {puestosLadoB.filter(isPuestoVisible).map(renderMapPin)}
+          </div>
+        </div>
 
       </div>
 
@@ -320,6 +367,8 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
             <div className="p-4">
               <RegisterForm
                 currentUser={currentUser}
+                initialPuestoId={selectedPuestoForForm.id}
+                isPuestoFixed={true}
                 onRecordSaved={() => {
                   if (onRecordSaved) onRecordSaved();
                   setIsFormModalOpen(false);

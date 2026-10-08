@@ -102,6 +102,7 @@ app.post('/api/registros', (req, res) => {
     ...req.body
   };
   db.registros.unshift(record);
+  db.registros.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   writeDB(db);
   console.log(`[SERVIDORES NETWORK] 📦 Nuevo pesaje recibido: ${record.pesoKg} kg de ${record.productoNombre} (Puesto: ${record.puestoNumero})`);
   res.status(201).json({ success: true, record });

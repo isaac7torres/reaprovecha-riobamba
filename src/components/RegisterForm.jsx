@@ -19,14 +19,14 @@ import {
 import { DB } from '../services/db';
 import { ESTADOS_DESPERDICIO } from '../types/initialData';
 
-export function RegisterForm({ currentUser, onRecordSaved }) {
+export function RegisterForm({ currentUser, onRecordSaved, initialPuestoId = null, isPuestoFixed = false }) {
   const [naves, setNaves] = useState([]);
   const [productos, setProductos] = useState([]);
   const [puestos, setPuestos] = useState([]);
 
   // Form State
   const [selectedNave, setSelectedNave] = useState('nave-1');
-  const [selectedPuesto, setSelectedPuesto] = useState('');
+  const [selectedPuesto, setSelectedPuesto] = useState(initialPuestoId || '');
   const [selectedProducto, setSelectedProducto] = useState('');
   const [pesoKg, setPesoKg] = useState('');
   const [estadoResiduo, setEstadoResiduo] = useState('conservas');
@@ -43,7 +43,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
   useEffect(() => {
     loadCatalogos();
-  }, []);
+  }, [initialPuestoId]);
 
   const loadCatalogos = () => {
     const navs = DB.getNaves();
@@ -54,7 +54,12 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
     setProductos(prods);
     setPuestos(psts);
 
-    if (psts.length > 0 && !selectedPuesto) setSelectedPuesto(psts[0].id);
+    if (initialPuestoId) {
+      setSelectedPuesto(initialPuestoId);
+    } else if (psts.length > 0 && !selectedPuesto) {
+      setSelectedPuesto(psts[0].id);
+    }
+
     if (prods.length > 0 && !selectedProducto) setSelectedProducto(prods[0].id);
   };
 
@@ -249,14 +254,26 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
         {/* 2. Selección de Puesto */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center space-x-1">
-            <Store className="w-4 h-4 text-reaprovecha-orange" />
-            <span>2. Número de Puesto del Mercado</span>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center justify-between">
+            <span className="flex items-center space-x-1">
+              <Store className="w-4 h-4 text-reaprovecha-orange" />
+              <span>2. Número de Puesto del Mercado</span>
+            </span>
+            {isPuestoFixed && (
+              <span className="text-[11px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full flex items-center space-x-1 border border-emerald-300 shadow-sm">
+                <span>🔒 Puesto Fijo (Mapa SIG 2D)</span>
+              </span>
+            )}
           </label>
           <select
-            value={selectedPuesto || (puestos.length > 0 ? puestos[0].id : '')}
-            onChange={(e) => setSelectedPuesto(e.target.value)}
-            className="w-full p-3.5 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-reaprovecha-green focus:border-reaprovecha-green bg-white font-semibold text-gray-800 text-sm shadow-sm"
+            value={selectedPuesto || initialPuestoId || (puestos.length > 0 ? puestos[0].id : '')}
+            onChange={(e) => !isPuestoFixed && setSelectedPuesto(e.target.value)}
+            disabled={isPuestoFixed}
+            className={`w-full p-3.5 rounded-2xl border font-semibold text-sm shadow-sm transition-all ${
+              isPuestoFixed
+                ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-black cursor-not-allowed ring-2 ring-emerald-500/20'
+                : 'bg-white border-gray-300 focus:ring-2 focus:ring-reaprovecha-green focus:border-reaprovecha-green text-gray-800'
+            }`}
           >
             {puestos.map(p => (
               <option key={p.id} value={p.id}>

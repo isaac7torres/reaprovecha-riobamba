@@ -20,12 +20,12 @@ export const INITIAL_PRODUCTOS = [
   { id: 'prod-11', naveId: 'nave-1', nombre: 'Limón', color: '#27AE60', icono: '🍋', rendConservas: 0.48, rendCompost: 0.48 },
 ];
 
-export const INITIAL_PUESTOS = Array.from({ length: 15 }, (_, i) => ({
+export const INITIAL_PUESTOS = Array.from({ length: 20 }, (_, i) => ({
   id: `puesto-${i + 1}`,
   numero: `Puesto ${String(i + 1).padStart(2, '0')}`,
   naveId: 'nave-1',
-  comerciante: `Comerciante Sector ${String.fromCharCode(65 + (i % 3))}`,
-  sector: `Pasillo ${Math.floor(i / 5) + 1}`
+  comerciante: `Comerciante ${String(i + 1).padStart(2, '0')} (Sector ${i < 10 ? 'A' : 'B'})`,
+  sector: i < 10 ? 'Pasillo Único - Lado A (Izquierdo)' : 'Pasillo Único - Lado B (Derecho)'
 }));
 
 export const INITIAL_USERS = [
@@ -45,14 +45,13 @@ const generateSeedRecords = () => {
   const records = [];
   const now = new Date();
   
-  // 12 días de registros
-  for (let d = 12; d >= 0; d--) {
-    const recordDate = new Date(now);
-    recordDate.setDate(now.getDate() - d);
-    
-    // Entre 3 y 6 registros por día
-    const dailyEntriesCount = 4 + (d % 3);
+  // 12 días de registros semilla (desde hace 12 días hasta ayer)
+  for (let d = 12; d >= 1; d--) {
+    const dailyEntriesCount = 3 + (d % 3);
     for (let j = 0; j < dailyEntriesCount; j++) {
+      const recordDate = new Date(now);
+      recordDate.setDate(now.getDate() - d);
+      
       const prod = INITIAL_PRODUCTOS[(d + j * 2) % INITIAL_PRODUCTOS.length];
       const puesto = INITIAL_PUESTOS[(d * 2 + j) % INITIAL_PUESTOS.length];
       const weight = parseFloat((12.5 + (j * 7.3) + ((d * 3.1) % 25)).toFixed(2));
@@ -79,7 +78,7 @@ const generateSeedRecords = () => {
       });
     }
   }
-  return records;
+  return records.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 };
 
 export const INITIAL_REGISTROS = generateSeedRecords();

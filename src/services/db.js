@@ -65,7 +65,8 @@ const initStorage = () => {
   if (!localStorage.getItem(STORAGE_KEYS.PRODUCTOS)) {
     localStorage.setItem(STORAGE_KEYS.PRODUCTOS, JSON.stringify(INITIAL_PRODUCTOS));
   }
-  if (!localStorage.getItem(STORAGE_KEYS.PUESTOS)) {
+  const existingPuestos = localStorage.getItem(STORAGE_KEYS.PUESTOS);
+  if (!existingPuestos || JSON.parse(existingPuestos).length < 20) {
     localStorage.setItem(STORAGE_KEYS.PUESTOS, JSON.stringify(INITIAL_PUESTOS));
   }
   if (!localStorage.getItem(STORAGE_KEYS.REGISTROS)) {
@@ -264,7 +265,7 @@ export const DB = {
 
   getRegistros: () => {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.REGISTROS) || '[]');
-    return raw.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    return raw.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   },
 
   addRegistro: async (newRecord) => {
