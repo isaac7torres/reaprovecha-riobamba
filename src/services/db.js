@@ -111,11 +111,9 @@ if (supabase) {
   fetchCloudRecords();
   fetchCloudUsers();
 
-  // Polling automático cada 2.5 segundos
   setInterval(fetchCloudRecords, 2500);
   setInterval(fetchCloudUsers, 4000);
 
-  // Escuchar cuando el usuario vuelve a la pestaña
   if (typeof window !== 'undefined') {
     window.addEventListener('focus', fetchCloudRecords);
     window.addEventListener('visibilitychange', () => {
@@ -276,6 +274,24 @@ export const DB = {
       ...newRecord
     };
 
+    // Objeto estricto sanitizado para Supabase Nube
+    const cloudPayload = {
+      id: recordPayload.id,
+      fecha: recordPayload.fecha,
+      naveId: recordPayload.naveId || 'nave-1',
+      naveNombre: recordPayload.naveNombre || 'Nave Frutos Tropicales',
+      puestoId: recordPayload.puestoId || 'puesto-1',
+      puestoNumero: recordPayload.puestoNumero || 'Puesto 01',
+      productoId: recordPayload.productoId || 'prod-1',
+      productoNombre: recordPayload.productoNombre || 'Fruta',
+      productoIcono: recordPayload.productoIcono || '🍎',
+      pesoKg: Number(recordPayload.pesoKg) || 0,
+      estado: recordPayload.estado || 'conservas',
+      estadoNombre: recordPayload.estadoNombre || 'Apto para Conservas',
+      registrador: recordPayload.registrador || 'Practicante',
+      observacion: recordPayload.observacion || ''
+    };
+
     // 1. Guardar de inmediato en la memoria local para respuesta UI instantánea
     const currentList = DB.getRegistros();
     const updatedList = [recordPayload, ...currentList.filter(r => r.id !== recordPayload.id)];
@@ -287,7 +303,7 @@ export const DB = {
       try {
         const { data, error } = await supabase
           .from('registros_desperdicios')
-          .insert([recordPayload])
+          .insert([cloudPayload])
           .select();
 
         if (!error && data && data.length > 0) {
