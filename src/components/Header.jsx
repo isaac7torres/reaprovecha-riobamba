@@ -1,4 +1,5 @@
 import React from 'react';
+import { DB } from '../services/db';
 import { 
   BarChart3, 
   PlusCircle, 
@@ -41,6 +42,15 @@ export function Header({ activeTab, setActiveTab, currentRole, onLockRole, onReq
                 <span className="bg-reaprovecha-green text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
                   v2.0 Mapa SIG
                 </span>
+                {DB.isCloudMode() ? (
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-black flex items-center space-x-1 border border-emerald-300 shadow-sm">
+                    <span>☁️ Nube Supabase Activa</span>
+                  </span>
+                ) : (
+                  <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-black flex items-center space-x-1 border border-amber-300 shadow-sm">
+                    <span>📱 Modo Local (Sin Nube)</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500 font-medium">Mercado Mayorista - Nave Frutos Tropicales</p>
             </div>
