@@ -22,7 +22,7 @@ const getApiBaseUrl = () => {
   return `http://${host}:3001/api`;
 };
 
-// Sanitización ultra-segura de Variables de Entorno Supabase para evitar cierres o pantallas en blanco
+// Sanitización de Variables de Entorno Supabase
 const getSupabaseClient = () => {
   try {
     let url = import.meta.env.VITE_SUPABASE_URL;
@@ -30,7 +30,6 @@ const getSupabaseClient = () => {
 
     if (!url || !key) return null;
 
-    // Limpiar comillas o espacios accidentales al copiar/pegar
     url = String(url).trim().replace(/^["']|["']$/g, '');
     key = String(key).trim().replace(/^["']|["']$/g, '');
 
@@ -42,7 +41,7 @@ const getSupabaseClient = () => {
 
     return createClient(url, key);
   } catch (err) {
-    console.warn('⚠️ No se pudo inicializar Supabase (URL/Key inválida), usando respaldo local:', err);
+    console.warn('⚠️ Fallback a local storage:', err);
     return null;
   }
 };
@@ -80,7 +79,7 @@ const initStorage = () => {
 
 initStorage();
 
-// Sincronización en Tiempo Real con Supabase en Producción Vercel
+// Sincronización Nube Supabase (WebSockets + Polling cada 3 segundos como garantía total)
 if (supabase) {
   const fetchCloudRecords = async () => {
     try {
@@ -89,33 +88,34 @@ if (supabase) {
         .select('*')
         .order('fecha', { ascending: false });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(data));
         notifyListeners();
       }
     } catch (err) {
-      console.warn('Error cargando registros de Supabase:', err);
+      console.warn('Error fetching Supabase records:', err);
     }
   };
 
   fetchCloudRecords();
 
+  // Polling automático cada 3.5 segundos para garantizar actualización en todos los celulares
+  setInterval(fetchCloudRecords, 3500);
+
   try {
     supabase
       .channel('realtime_registros')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, () => {
         fetchCloudRecords();
       })
       .subscribe();
-  } catch (err) {
-    console.warn('Error canal realtime Supabase:', err);
-  }
+  } catch (err) {}
 }
 
 // Escuchar eventos en Tiempo Real desde Servidor Local (SSE fallback para desarrollo local)
 let eventSource = null;
 const initRealtimeSSE = () => {
-  if (supabase) return; // Si Supabase está activo en Vercel, no se usa SSE local
+  if (supabase) return;
   try {
     const sseUrl = `${getApiBaseUrl()}/events`;
     eventSource = new EventSource(sseUrl);
@@ -130,9 +130,7 @@ const initRealtimeSSE = () => {
         if (data.users) localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(data.users));
         
         notifyListeners();
-      } catch (err) {
-        console.warn('Error procesando SSE:', err);
-      }
+      } catch (err) {}
     };
 
     eventSource.onerror = () => {
@@ -251,10 +249,10 @@ export const DB = {
         if (!error && data && data.length > 0) {
           savedRecord = data[0];
         } else if (error) {
-          console.warn('Error Supabase insert:', error);
+          console.warn('⚠️ Supabase error insert:', error.message || error);
         }
       } catch (err) {
-        console.warn('Fallback Supabase local:', err);
+        console.warn('⚠️ Supabase exception:', err);
       }
     } else {
       try {
