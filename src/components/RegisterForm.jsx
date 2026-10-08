@@ -58,9 +58,9 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
     if (prods.length > 0 && !selectedProducto) setSelectedProducto(prods[0].id);
   };
 
-  // Validar entrada estricta de números positivos
+  // Validar entrada estricta de números positivos y reemplazar coma por punto para teclados móviles en español (ej. 15,5 -> 15.5)
   const handlePesoChange = (e) => {
-    const val = e.target.value;
+    let val = e.target.value.replace(',', '.');
     if (val === '' || /^\d*\.?\d*$/.test(val)) {
       setPesoKg(val);
       setErrorMsg('');
@@ -73,42 +73,51 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!selectedNave) {
+    const activeNave = selectedNave || 'nave-1';
+    const activePuesto = selectedPuesto || (puestos.length > 0 ? puestos[0].id : '');
+    const activeProducto = selectedProducto || (productos.length > 0 ? productos[0].id : '');
+
+    if (!activeNave) {
       setErrorMsg('Por favor selecciona la Nave del mercado');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (!selectedPuesto) {
+    if (!activePuesto) {
       setErrorMsg('Por favor selecciona el Número de Puesto');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (!selectedProducto) {
+    if (!activeProducto) {
       setErrorMsg('Por favor selecciona el tipo de Fruta / Producto');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     const numPeso = parseFloat(pesoKg);
     if (isNaN(numPeso) || numPeso <= 0) {
-      setErrorMsg('⚠️ El peso ingresado debe ser un número positivo mayor a 0 kg (ej. 12.5)');
+      setErrorMsg('⚠️ El peso ingresado debe ser un número positivo mayor a 0 kg (ej. 12.50)');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (numPeso > 2000) {
       setErrorMsg('⚠️ El peso supera los 2,000 kg. Por favor verifica si ingresaste bien el valor de la balanza.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    const naveObj = naves.find(n => n.id === selectedNave);
-    const puestoObj = puestos.find(p => p.id === selectedPuesto);
-    const prodObj = productos.find(p => p.id === selectedProducto);
+    const naveObj = naves.find(n => n.id === activeNave);
+    const puestoObj = puestos.find(p => p.id === activePuesto);
+    const prodObj = productos.find(p => p.id === activeProducto);
     const estadoObj = ESTADOS_DESPERDICIO.find(e => e.id === estadoResiduo);
 
     setPendingRecord({
-      naveId: selectedNave,
+      naveId: activeNave,
       naveNombre: naveObj?.nombre || 'Nave Frutos Tropicales',
-      puestoId: selectedPuesto,
+      puestoId: activePuesto,
       puestoNumero: puestoObj?.numero || 'Puesto Sin Número',
       puestoComerciante: puestoObj?.comerciante || '',
-      productoId: selectedProducto,
+      productoId: activeProducto,
       productoNombre: prodObj?.nombre || 'Fruta Genérica',
       productoIcono: prodObj?.icono || '🍎',
       pesoKg: numPeso,
@@ -133,7 +142,8 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
       setConfirmModalOpen(false);
 
       // Feedback de éxito instantáneo
-      setSuccessMsg(`✅ ¡Registro de ${pendingRecord.pesoKg} kg de ${pendingRecord.productoNombre} guardado correctamente!`);
+      const msg = `✅ ¡Registro de ${pendingRecord.pesoKg} kg de ${pendingRecord.productoNombre} guardado correctamente!`;
+      setSuccessMsg(msg);
       
       // Limpiar solo el peso y la observación para facilitar el pesaje del siguiente lote
       setPesoKg('');
@@ -142,12 +152,15 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
       if (onRecordSaved) onRecordSaved();
 
-      // Desaparecer mensaje tras 5 segundos
-      setTimeout(() => setSuccessMsg(''), 5000);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Desaparecer mensaje tras 6 segundos
+      setTimeout(() => setSuccessMsg(''), 6000);
 
     } catch (err) {
       console.error('Error guardando registro:', err);
       setErrorMsg('Ocurrió un problema al guardar el registro en la base de datos.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +197,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
       {/* Alerta de Éxito Prominente */}
       {successMsg && (
-        <div className="mb-6 p-5 bg-emerald-50 border-2 border-emerald-400 text-emerald-900 rounded-3xl font-bold flex items-center space-x-3 shadow-md">
+        <div className="mb-6 p-5 bg-emerald-50 border-2 border-emerald-400 text-emerald-900 rounded-3xl font-bold flex items-center space-x-3 shadow-md animate-bounce">
           <CheckCircle2 className="w-7 h-7 text-emerald-600 shrink-0" />
           <div>
             <p className="text-sm font-extrabold">{successMsg}</p>
@@ -241,7 +254,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
             <span>2. Número de Puesto del Mercado</span>
           </label>
           <select
-            value={selectedPuesto}
+            value={selectedPuesto || (puestos.length > 0 ? puestos[0].id : '')}
             onChange={(e) => setSelectedPuesto(e.target.value)}
             className="w-full p-3.5 rounded-2xl border border-gray-300 focus:ring-2 focus:ring-reaprovecha-green focus:border-reaprovecha-green bg-white font-semibold text-gray-800 text-sm shadow-sm"
           >
@@ -261,21 +274,24 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
           </label>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1 border border-gray-100 rounded-2xl bg-gray-50/50">
-            {productos.map(p => (
-              <button
-                type="button"
-                key={p.id}
-                onClick={() => setSelectedProducto(p.id)}
-                className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center space-y-1 ${
-                  selectedProducto === p.id
-                    ? 'border-reaprovecha-red bg-red-50 text-reaprovecha-red font-bold shadow-sm ring-2 ring-reaprovecha-red/30'
-                    : 'border-white bg-white hover:border-gray-200 text-gray-700 shadow-sm'
-                }`}
-              >
-                <span className="text-2xl">{p.icono}</span>
-                <span className="text-xs font-semibold">{p.nombre}</span>
-              </button>
-            ))}
+            {productos.map(p => {
+              const isSelected = (selectedProducto || (productos.length > 0 ? productos[0].id : '')) === p.id;
+              return (
+                <button
+                  type="button"
+                  key={p.id}
+                  onClick={() => setSelectedProducto(p.id)}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center space-y-1 ${
+                    isSelected
+                      ? 'border-reaprovecha-red bg-red-50 text-reaprovecha-red font-bold shadow-sm ring-2 ring-reaprovecha-red/30'
+                      : 'border-white bg-white hover:border-gray-200 text-gray-700 shadow-sm'
+                  }`}
+                >
+                  <span className="text-2xl">{p.icono}</span>
+                  <span className="text-xs font-semibold">{p.nombre}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -302,7 +318,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
           </div>
           <p className="text-[11px] text-gray-500 mt-2 flex items-center space-x-1">
             <Info className="w-3.5 h-3.5 text-reaprovecha-green" />
-            <span>Solo valores numéricos positivos mayores a 0.</span>
+            <span>Ingresa el peso en kg (soporta punto y coma decimal en celulares).</span>
           </p>
         </div>
 
@@ -345,8 +361,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
 
         {/* Botón Principal (Abre Modal de Confirmación) */}
         <button
-          type="button"
-          onClick={handleOpenConfirm}
+          type="submit"
           className="w-full py-4 bg-reaprovecha-green hover:bg-reaprovecha-green-dark text-white font-extrabold text-base rounded-2xl shadow-xl hover:shadow-2xl transition-all active:scale-98 flex items-center justify-center space-x-2 cursor-pointer"
         >
           <Send className="w-5 h-5 text-reaprovecha-orange-light" />
@@ -372,6 +387,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
               </div>
               
               <button 
+                type="button"
                 onClick={() => setConfirmModalOpen(false)}
                 className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10"
               >
@@ -438,7 +454,7 @@ export function RegisterForm({ currentUser, onRecordSaved }) {
                   type="button"
                   onClick={handleFinalSubmit}
                   disabled={isSubmitting}
-                  className="py-3 px-4 bg-reaprovecha-green hover:bg-reaprovecha-green-dark text-white font-extrabold rounded-2xl text-xs shadow-lg flex items-center justify-center space-x-1.5 transition-all"
+                  className="py-3 px-4 bg-reaprovecha-green hover:bg-reaprovecha-green-dark text-white font-extrabold rounded-2xl text-xs shadow-lg flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span>Guardando...</span>
