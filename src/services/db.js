@@ -18,16 +18,36 @@ const STORAGE_KEYS = {
 
 // Determinar el servidor backend de red local
 const getApiBaseUrl = () => {
-  const host = window.location.hostname || 'localhost';
+  const host = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : 'localhost';
   return `http://${host}:3001/api`;
 };
 
-// Cliente de Supabase para Producción en la Nube
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+// Sanitización ultra-segura de Variables de Entorno Supabase para evitar cierres o pantallas en blanco
+const getSupabaseClient = () => {
+  try {
+    let url = import.meta.env.VITE_SUPABASE_URL;
+    let key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!url || !key) return null;
+
+    // Limpiar comillas o espacios accidentales al copiar/pegar
+    url = String(url).trim().replace(/^["']|["']$/g, '');
+    key = String(key).trim().replace(/^["']|["']$/g, '');
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
+
+    if (url.length < 10 || key.length < 10) return null;
+
+    return createClient(url, key);
+  } catch (err) {
+    console.warn('⚠️ No se pudo inicializar Supabase (URL/Key inválida), usando respaldo local:', err);
+    return null;
+  }
+};
+
+export const supabase = getSupabaseClient();
 
 // Listeners reactivos de la UI
 const listeners = new Set();
@@ -40,6 +60,7 @@ export const subscribeToDataChanges = (callback) => {
 
 // Inicializar almacenamiento local con datos semilla si no existen
 const initStorage = () => {
+  if (typeof localStorage === 'undefined') return;
   if (!localStorage.getItem(STORAGE_KEYS.NAVES)) {
     localStorage.setItem(STORAGE_KEYS.NAVES, JSON.stringify(INITIAL_NAVES));
   }
@@ -61,7 +82,6 @@ initStorage();
 
 // Sincronización en Tiempo Real con Supabase en Producción Vercel
 if (supabase) {
-  // Cargar datos iniciales de Supabase al arrancar
   const fetchCloudRecords = async () => {
     try {
       const { data, error } = await supabase
@@ -80,13 +100,16 @@ if (supabase) {
 
   fetchCloudRecords();
 
-  // Escuchar cambios en tiempo real desde Supabase WebSockets
-  supabase
-    .channel('realtime_registros')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, (payload) => {
-      fetchCloudRecords();
-    })
-    .subscribe();
+  try {
+    supabase
+      .channel('realtime_registros')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros_desperdicios' }, (payload) => {
+        fetchCloudRecords();
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn('Error canal realtime Supabase:', err);
+  }
 }
 
 // Escuchar eventos en Tiempo Real desde Servidor Local (SSE fallback para desarrollo local)
@@ -112,8 +135,8 @@ const initRealtimeSSE = () => {
       }
     };
 
-    eventSource.onerror = (err) => {
-      eventSource.close();
+    eventSource.onerror = () => {
+      if (eventSource) eventSource.close();
     };
   } catch (err) {}
 };
@@ -218,7 +241,6 @@ export const DB = {
 
     let savedRecord = null;
 
-    // 1. Si Supabase está activo en Vercel, guardar directamente en la Nube
     if (supabase) {
       try {
         const { data, error } = await supabase
@@ -235,7 +257,6 @@ export const DB = {
         console.warn('Fallback Supabase local:', err);
       }
     } else {
-      // 2. Si es desarrollo local con server.js
       try {
         const res = await fetch(`${getApiBaseUrl()}/registros`, {
           method: 'POST',
@@ -253,7 +274,6 @@ export const DB = {
       savedRecord = recordPayload;
     }
 
-    // Actualizar localStorage local como respaldo
     const list = DB.getRegistros();
     list.unshift(savedRecord);
     localStorage.setItem(STORAGE_KEYS.REGISTROS, JSON.stringify(list));
@@ -278,7 +298,6 @@ export const DB = {
     notifyListeners();
   },
 
-  // GESTIÓN DE PRACTICANTES / USUARIOS Y PINES
   getUsers: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]'),
 
   saveUser: async (user) => {
