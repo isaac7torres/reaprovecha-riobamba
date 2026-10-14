@@ -123,8 +123,8 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
             </div>
             <p className="text-[11px] text-slate-300 font-medium truncate">{puesto.comerciante}</p>
             {isPesado ? (
-              <div className="bg-emerald-950/80 text-emerald-300 px-2 py-1 rounded-xl text-[10px] font-extrabold flex items-center justify-center space-x-1 border border-emerald-500/30">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <div className="bg-blue-950/80 text-blue-300 px-2 py-1 rounded-xl text-[10px] font-extrabold flex items-center justify-center space-x-1 border border-blue-500/30">
+                <CheckCircle2 className="w-3 h-3 text-blue-400" />
                 <span>Hoy: {stat.totalKgHoy.toFixed(1)} kg</span>
               </div>
             ) : (
@@ -133,7 +133,7 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
                 <span>Pendiente de Pesar</span>
               </div>
             )}
-            <p className="text-[9px] text-emerald-400 font-bold tracking-wider pt-0.5 uppercase">Tocar para registrar peso</p>
+            <p className="text-[9px] text-blue-400 font-bold tracking-wider pt-0.5 uppercase">Tocar para registrar peso</p>
           </div>
           {/* Flecha del Tooltip */}
           <div className="w-2.5 h-2.5 bg-slate-900 transform rotate-45 -mt-1.5 border-r border-b border-slate-700" />
@@ -150,7 +150,7 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
           {/* Cuerpo del Pin (Forma de gota de mapa 3D) */}
           <div className={`w-11 h-11 rounded-t-full rounded-br-full transform -rotate-45 shadow-xl border-2 transition-all flex items-center justify-center relative ${
             isPesado
-              ? 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-emerald-400 text-white border-white ring-4 ring-emerald-400/40 hover:ring-emerald-400/80'
+              ? 'bg-gradient-to-tr from-blue-600 via-blue-500 to-sky-400 text-white border-white ring-4 ring-blue-400/40 hover:ring-blue-400/80'
               : 'bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-slate-950 border-white ring-4 ring-amber-300/50 hover:ring-amber-400/90 animate-pulse'
           }`}>
             
@@ -166,14 +166,14 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
 
             {/* Badge de pulso animado para puestos pesados hoy */}
             {isPesado && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-300 ring-2 ring-white animate-ping" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-300 ring-2 ring-white animate-ping" />
             )}
           </div>
 
           {/* Etiqueta flotante inferior con el número de puesto */}
           <span className={`mt-2 px-2 py-0.5 rounded-md text-[10px] font-black shadow-md border uppercase tracking-wider ${
             isPesado 
-              ? 'bg-emerald-900 text-emerald-100 border-emerald-600' 
+              ? 'bg-blue-900 text-blue-100 border-blue-600' 
               : 'bg-slate-900 text-amber-300 border-slate-700'
           }`}>
             P-{puestoNumOnly}
@@ -207,8 +207,8 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
         {/* Leyenda de Colores */}
         <div className="flex items-center space-x-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 text-xs font-bold">
           <div className="flex items-center space-x-1.5">
-            <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 animate-pulse" />
-            <span className="text-emerald-900">Pesado Hoy ({puestosPesadosHoyCount})</span>
+            <span className="w-3.5 h-3.5 rounded-full bg-blue-500 ring-4 ring-blue-100 animate-pulse" />
+            <span className="text-blue-900">Pesado Hoy ({puestosPesadosHoyCount})</span>
           </div>
 
           <div className="flex items-center space-x-1.5">
@@ -247,7 +247,7 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
             onClick={() => setFilterEstadoPuesto('pesados')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               filterEstadoPuesto === 'pesados'
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -279,8 +279,8 @@ export function InteractiveMarketMap({ currentUser, onRecordSaved }) {
 
         {/* ÁREA SUPERIOR: LADO A (Puestos 01 al 10 - Pines de Ubicación) */}
         <div className="space-y-3 relative z-10">
-          <div className="flex items-center space-x-2 text-xs font-black text-emerald-950 uppercase tracking-wider bg-emerald-100/90 backdrop-blur-md px-4 py-2 rounded-xl border border-emerald-300 w-fit shadow-sm">
-            <Building2 className="w-4 h-4 text-emerald-700" />
+          <div className="flex items-center space-x-2 text-xs font-black text-blue-950 uppercase tracking-wider bg-blue-100/90 backdrop-blur-md px-4 py-2 rounded-xl border border-blue-300 w-fit shadow-sm">
+            <Building2 className="w-4 h-4 text-blue-700" />
             <span>LADO A - PUESTOS 01 AL 10 (SECTOR IZQUIERDO)</span>
           </div>
 
